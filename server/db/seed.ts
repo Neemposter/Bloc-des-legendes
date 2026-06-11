@@ -27,20 +27,12 @@ export function seedIfEmpty(db: Db) {
   }
 
   if (db.select().from(timeSlots).all().length === 0) {
+    // Créneaux officiels du club (source FFME, fiche club n° 029020)
     db.insert(timeSlots).values([
-      { day: 'monday', startTime: '17:30', endTime: '19:00', groupName: 'École d\'escalade (8-12 ans)', instructor: 'Manon', capacity: 12 },
-      { day: 'monday', startTime: '19:00', endTime: '21:00', groupName: 'Adultes loisir', instructor: 'Karim', capacity: 16 },
-      { day: 'tuesday', startTime: '18:00', endTime: '19:30', groupName: 'Ados perfectionnement', instructor: 'Léa', capacity: 10 },
-      { day: 'tuesday', startTime: '19:30', endTime: '21:30', groupName: 'Équipe compétition', instructor: 'Bastien', capacity: 8 },
-      { day: 'wednesday', startTime: '14:00', endTime: '15:30', groupName: 'École d\'escalade (6-9 ans)', instructor: 'Manon', capacity: 12 },
-      { day: 'wednesday', startTime: '15:30', endTime: '17:00', groupName: 'École d\'escalade (10-13 ans)', instructor: 'Léa', capacity: 12 },
-      { day: 'wednesday', startTime: '18:00', endTime: '21:00', groupName: 'Accès libre adhérents', instructor: null, capacity: 30 },
-      { day: 'thursday', startTime: '19:00', endTime: '21:00', groupName: 'Adultes loisir', instructor: 'Karim', capacity: 16 },
-      { day: 'friday', startTime: '17:30', endTime: '19:00', groupName: 'Ados loisir', instructor: 'Bastien', capacity: 12 },
-      { day: 'friday', startTime: '19:00', endTime: '22:00', groupName: 'Soirée bloc — accès libre', instructor: null, capacity: 30 },
-      { day: 'saturday', startTime: '10:00', endTime: '12:00', groupName: 'Grimpe en famille', instructor: 'Manon', capacity: 14 },
-      { day: 'saturday', startTime: '14:00', endTime: '17:00', groupName: 'Accès libre adhérents', instructor: null, capacity: 30 },
-      { day: 'sunday', startTime: '10:00', endTime: '13:00', groupName: 'Accès libre adhérents', instructor: null, capacity: 30 },
+      { day: 'monday', startTime: '21:00', endTime: '23:00', groupName: 'Adultes', instructor: null, capacity: 0 },
+      { day: 'tuesday', startTime: '18:30', endTime: '20:30', groupName: 'Jeunes — école d\'escalade', instructor: null, capacity: 0 },
+      { day: 'thursday', startTime: '21:00', endTime: '23:00', groupName: 'Adultes', instructor: null, capacity: 0 },
+      { day: 'saturday', startTime: '09:00', endTime: '12:00', groupName: 'Tous niveaux', instructor: null, capacity: 0 },
     ]).run()
   }
 
@@ -62,6 +54,26 @@ export function seedIfEmpty(db: Db) {
           title: 'Sortie falaise de printemps',
           summary: 'Inscriptions ouvertes pour la sortie annuelle en falaise, tous niveaux.',
           content: 'La traditionnelle sortie falaise du club aura lieu au printemps. Débutants bienvenus, encadrement assuré par les bénévoles diplômés.',
+          status: 'published',
+          publishedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          authorId: admin.id,
+        },
+        {
+          title: 'Nouveaux blocs : le mur fait peau neuve',
+          summary: 'Les ouvreurs ont démonté tout le pan central — 25 nouveaux blocs du jaune au noir.',
+          content: 'Grosse session d\'ouverture ce week-end : le pan central a été entièrement renouvelé. Au programme, 25 nouveaux blocs étalés du jaune (débutant) au noir (expert), avec un focus sur les volumes et les dalles techniques. Merci aux bénévoles ouvreurs !',
+          status: 'published',
+          publishedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          authorId: admin.id,
+        },
+        {
+          title: 'Le club aux championnats départementaux',
+          summary: 'Six grimpeurs du club qualifiés, deux podiums — retour sur une belle journée de compétition.',
+          content: 'L\'équipe compétition du Bloc des Légendes s\'est déplacée aux championnats départementaux de bloc. Six qualifiés, deux podiums et de très belles performances chez les jeunes. Bravo à tous les grimpeurs et aux encadrants.',
           status: 'published',
           publishedAt: now,
           createdAt: now,
