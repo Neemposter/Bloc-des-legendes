@@ -59,18 +59,15 @@ function slotStyle(slot: TimeSlot) {
   return { top: `${top}px`, height: `${height}px` }
 }
 
-type Category = 'ecole' | 'ados' | 'adultes' | 'compet' | 'libre'
-
-function slotCategory(slot: TimeSlot): Category {
-  const n = slot.groupName.toLowerCase()
-  if (n.includes('libre') || n.includes('famille')) return 'libre'
-  if (n.includes('école') || n.includes('ecole')) return 'ecole'
-  if (n.includes('ados')) return 'ados'
-  if (n.includes('comp')) return 'compet'
-  return 'adultes'
+// slotCategory : util partagé avec l'accueil (app/utils/slots.ts)
+function slotTitle(slot: TimeSlot): string {
+  const parts = [`${slot.startTime} – ${slot.endTime}`, slot.groupName]
+  if (slot.instructor) parts.push(`avec ${slot.instructor}`)
+  if (slot.capacity > 0) parts.push(`${slot.capacity} places`)
+  return parts.join(' · ')
 }
 
-const LEGEND: { category: Category, label: string }[] = [
+const LEGEND: { category: SlotCategory, label: string }[] = [
   { category: 'ecole', label: 'École d\'escalade' },
   { category: 'ados', label: 'Ados' },
   { category: 'adultes', label: 'Adultes' },
@@ -80,19 +77,14 @@ const LEGEND: { category: Category, label: string }[] = [
 </script>
 
 <template>
-  <div class="container">
-    <section class="cal-hero">
-      <span class="hero-holds" aria-hidden="true">
-        <i class="hold hold-1" /><i class="hold hold-2" /><i class="hold hold-3" /><i class="hold hold-4" />
-      </span>
-      <p class="kicker">Planning hebdomadaire</p>
-      <h1>Le calendrier des séances</h1>
-      <p class="lede">
-        Les créneaux se répètent chaque semaine, hors vacances scolaires.
-        Les événements ponctuels (compétitions, sorties falaise) sont annoncés dans les actualités.
-      </p>
-    </section>
+  <div>
+    <UiPageHero
+      kicker="Planning hebdomadaire"
+      title="Le calendrier des séances"
+      lede="Les créneaux se répètent chaque semaine, hors vacances scolaires. Les événements ponctuels (compétitions, sorties falaise) sont annoncés dans les actualités."
+    />
 
+    <div class="container cal-page">
     <ul class="legend" aria-label="Légende des groupes">
       <li v-for="item in LEGEND" :key="item.category" class="legend-item">
         <span class="legend-dot" :class="`dot--${item.category}`" aria-hidden="true" />
@@ -119,14 +111,16 @@ const LEGEND: { category: Category, label: string }[] = [
               v-for="slot in slotsByDay[day.key]"
               :key="slot.id"
               class="slot"
-              :class="`slot--${slotCategory(slot)}`"
+              :class="`slot--${slotCategory(slot.groupName)}`"
               :style="slotStyle(slot)"
-              :title="`${slot.startTime} – ${slot.endTime} · ${slot.groupName}${slot.instructor ? ` · avec ${slot.instructor}` : ''} · ${slot.capacity} places`"
+              :title="slotTitle(slot)"
             >
               <p class="slot-time">{{ slot.startTime }} – {{ slot.endTime }}</p>
               <h3 class="slot-group">{{ slot.groupName }}</h3>
-              <p class="slot-meta">
-                <template v-if="slot.instructor">Avec {{ slot.instructor }} · </template>{{ slot.capacity }} places
+              <p v-if="slot.instructor || slot.capacity > 0" class="slot-meta">
+                <template v-if="slot.instructor">Avec {{ slot.instructor }}</template>
+                <template v-if="slot.instructor && slot.capacity > 0"> · </template>
+                <template v-if="slot.capacity > 0">{{ slot.capacity }} places</template>
               </p>
             </article>
           </div>
@@ -138,53 +132,14 @@ const LEGEND: { category: Category, label: string }[] = [
       Une question sur un créneau ou un essai gratuit ?
       <NuxtLink to="/contact" class="cal-footnote-link">Écrivez-nous</NuxtLink>.
     </p>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.cal-hero {
-  position: relative;
-  padding: 3.2rem 0 1.6rem;
-  max-width: 620px;
+.cal-page {
+  padding-top: 2rem;
 }
-
-.kicker {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 0.85rem;
-  color: var(--turquoise);
-  margin: 0 0 0.5rem;
-}
-
-h1 {
-  font-size: clamp(2rem, 5vw, 3rem);
-  text-transform: uppercase;
-}
-
-.lede {
-  color: var(--ink-soft);
-  margin-top: 0.9rem;
-}
-
-.hero-holds {
-  position: absolute;
-  right: -260px;
-  top: 3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.3rem;
-}
-
-.hold {
-  display: inline-block;
-  border-radius: 55% 45% 60% 40% / 50% 60% 40% 50%;
-}
-
-.hold-1 { width: 26px; height: 22px; background: var(--turquoise); transform: translateX(38px) rotate(15deg); }
-.hold-2 { width: 18px; height: 20px; background: var(--ambre); transform: translateX(0) rotate(-20deg); }
-.hold-3 { width: 22px; height: 18px; background: var(--moutarde); transform: translateX(52px) rotate(40deg); }
-.hold-4 { width: 16px; height: 16px; background: var(--olive); transform: translateX(20px); }
 
 .legend {
   list-style: none;
@@ -390,10 +345,6 @@ h1 {
 
   .slot-meta {
     white-space: normal;
-  }
-
-  .hero-holds {
-    display: none;
   }
 }
 </style>

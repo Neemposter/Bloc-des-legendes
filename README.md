@@ -28,9 +28,10 @@ compte admin). Idempotent : ne touche jamais aux tables non vides.
   Un besoin récurrent → nouveau composant `Ui*`, pas du copier-coller
 - Chaque page commence par `UiSectionTitle` et est wrappée dans `.container`
 
-**Pages** — les stubs existent déjà avec un bloc `TODO(...)` en tête de fichier
-qui décrit ce qui reste à faire : `actualites.vue`, `contact.vue`, `admin/index.vue`
-(`inscription.vue` est quasi terminée, il manque les vrais tarifs).
+**Pages** — il reste un bloc `TODO(...)` en tête de `admin/index.vue` qui décrit
+le travail back-office restant. Pas de page inscription : décision d'équipe,
+l'inscription se fait hors site (le lien externe reste géré en base via
+`settings.registration_link` pour le futur back-office).
 
 **Routes API** — exemple minimal avec la base :
 
