@@ -51,6 +51,9 @@ const demoTextarea = ref('')
         <UiButton to="/calendrier" variant="secondary">Lien interne (to)</UiButton>
         <UiButton href="https://example.com">Lien externe (href)</UiButton>
       </div>
+      <div class="sg-row sg-row--dark">
+        <UiButton variant="inverse">Inverse (sur fond coloré)</UiButton>
+      </div>
     </section>
 
     <section class="sg-section">
@@ -144,6 +147,13 @@ const demoTextarea = ref('')
   flex-wrap: wrap;
   gap: 0.8rem;
   align-items: center;
+}
+
+.sg-row--dark {
+  margin-top: 0.8rem;
+  background: var(--turquoise);
+  border-radius: 14px;
+  padding: 1rem;
 }
 
 .sg-cards {

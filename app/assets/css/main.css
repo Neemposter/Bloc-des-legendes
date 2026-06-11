@@ -40,6 +40,9 @@
   /* Typo */
   --font-display: 'Moon Get', 'Quicksand', 'Arial Rounded MT Bold', sans-serif;
   --font-body: 'Coolvetica', 'Jost', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Layout */
+  --header-height: 64px;
 }
 
 *,

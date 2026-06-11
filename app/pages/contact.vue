@@ -1,15 +1,25 @@
 <script setup lang="ts">
-// TODO(contact) :
-// 1. Créer POST /api/contact → insert dans contact_messages (valider les champs)
-// 2. Brancher onSubmit ci-dessous sur cette API ($fetch) + état succès/erreur
-// 3. Ajouter les vraies coordonnées du club (adresse de la salle, email)
 useHead({ title: 'Contact — Bloc des Légendes' })
 
 const form = reactive({ name: '', email: '', subject: '', message: '' })
+const status = ref<'idle' | 'sending' | 'success' | 'error'>('idle')
+const errorMessage = ref('')
 
-function onSubmit() {
-  // TODO: $fetch('/api/contact', { method: 'POST', body: form })
-  console.warn('Formulaire de contact pas encore branché', form)
+async function onSubmit() {
+  status.value = 'sending'
+  try {
+    await $fetch('/api/contact', { method: 'POST', body: { ...form } })
+    status.value = 'success'
+    form.name = ''
+    form.email = ''
+    form.subject = ''
+    form.message = ''
+  }
+  catch (err: unknown) {
+    status.value = 'error'
+    const fetchError = err as { data?: { message?: string } }
+    errorMessage.value = fetchError.data?.message ?? 'Une erreur est survenue, réessayez plus tard.'
+  }
 }
 </script>
 
@@ -27,15 +37,34 @@ function onSubmit() {
         <UiInput v-model="form.email" label="Email" name="email" type="email" required />
         <UiInput v-model="form.subject" label="Sujet" name="subject" />
         <UiTextarea v-model="form.message" label="Message" name="message" required />
-        <UiButton type="submit">Envoyer le message</UiButton>
+        <UiButton type="submit" :class="{ 'is-sending': status === 'sending' }">
+          {{ status === 'sending' ? 'Envoi en cours…' : 'Envoyer le message' }}
+        </UiButton>
+        <p v-if="status === 'success'" class="form-feedback form-feedback--success" role="status">
+          Message envoyé — on vous répond au plus vite !
+        </p>
+        <p v-if="status === 'error'" class="form-feedback form-feedback--error" role="alert">
+          {{ errorMessage }}
+        </p>
       </form>
 
       <aside class="contact-infos">
         <h3>Le club</h3>
         <p>
           Bloc des Légendes<br>
-          Salle d'escalade — adresse à compléter<br>
-          contact@blocdeslegendes.fr
+          Salle des sports Bodénès<br>
+          Rue de l'Hippodrome<br>
+          29260 Lesneven
+        </p>
+        <p>
+          <a href="mailto:blocdeslegendes@gmail.com" class="contact-link">blocdeslegendes@gmail.com</a>
+        </p>
+        <p>
+          <a href="https://www.instagram.com/blocdeslegendes/" target="_blank" rel="noopener" class="contact-link">Instagram @blocdeslegendes</a>
+        </p>
+        <p class="contact-extra">
+          Club affilié FFME n° 029020 · Ouvert dès 6 ans · Prêt de matériel ·
+          Accueil des personnes en situation de handicap
         </p>
       </aside>
     </div>
@@ -62,6 +91,24 @@ function onSubmit() {
   width: 100%;
 }
 
+.form-feedback {
+  margin: 0;
+  font-weight: 500;
+}
+
+.form-feedback--success {
+  color: var(--turquoise);
+}
+
+.form-feedback--error {
+  color: var(--ambre);
+}
+
+.is-sending {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 .contact-infos {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -75,7 +122,23 @@ function onSubmit() {
 
 .contact-infos p {
   color: var(--ink-soft);
-  margin: 0;
+  margin: 0 0 0.8rem;
+  line-height: 1.6;
+}
+
+.contact-link {
+  color: var(--turquoise);
+  font-weight: 500;
+}
+
+.contact-link:hover {
+  text-decoration: underline;
+}
+
+.contact-extra {
+  font-size: 0.88rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
 }
 
 @media (max-width: 760px) {

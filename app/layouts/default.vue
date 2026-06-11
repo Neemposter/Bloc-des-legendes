@@ -12,7 +12,6 @@
           <NuxtLink to="/">Accueil</NuxtLink>
           <NuxtLink to="/actualites">Actualités</NuxtLink>
           <NuxtLink to="/calendrier">Calendrier</NuxtLink>
-          <NuxtLink to="/inscription">Inscription</NuxtLink>
           <NuxtLink to="/contact">Contact</NuxtLink>
         </nav>
       </div>
@@ -23,10 +22,50 @@
     </main>
 
     <footer class="site-footer">
-      <div class="container footer-inner">
-        <p class="footer-brand">Bloc des Légendes</p>
-        <p>Club associatif d'escalade — planning, actualités et vie du club.</p>
-        <p class="footer-fineprint">© {{ new Date().getFullYear() }} Bloc des Légendes · Mentions légales (à venir)</p>
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <p class="footer-brand">Bloc des Légendes</p>
+            <p class="footer-desc">
+              Association d'escalade fondée en 2013 à Lesneven. Bloc en salle toute
+              l'année, falaise sur les côtes finistériennes à la belle saison.
+            </p>
+            <a
+              href="https://www.instagram.com/blocdeslegendes/"
+              target="_blank"
+              rel="noopener"
+              class="footer-insta"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <rect x="2" y="2" width="20" height="20" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" />
+              </svg>
+              @blocdeslegendes
+            </a>
+          </div>
+          <div>
+            <p class="footer-heading">Nous trouver</p>
+            <p>
+              Salle des sports Bodénès<br>
+              Rue de l'Hippodrome<br>
+              29260 Lesneven
+            </p>
+          </div>
+          <div>
+            <p class="footer-heading">Contact</p>
+            <p>
+              <a href="mailto:blocdeslegendes@gmail.com" class="footer-link">blocdeslegendes@gmail.com</a>
+            </p>
+            <p class="footer-ffme">
+              Club affilié FFME n° 029020<br>
+              Escalade &amp; escalade bloc
+            </p>
+          </div>
+        </div>
+        <p class="footer-fineprint">
+          © {{ new Date().getFullYear() }} Bloc des Légendes · Association loi 1901 · Mentions légales (à venir)
+        </p>
       </div>
     </footer>
   </div>
@@ -52,7 +91,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding-block: 0.85rem;
+  min-height: var(--header-height);
+  padding-block: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -112,7 +152,18 @@
   margin-top: 4rem;
   background: var(--ink);
   color: rgba(255, 255, 255, 0.85);
-  padding-block: 2.2rem;
+  padding-block: 2.6rem 1.6rem;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2.5rem;
+}
+
+.footer-grid p {
+  margin: 0.2rem 0;
+  line-height: 1.6;
 }
 
 .footer-brand {
@@ -123,14 +174,62 @@
   margin: 0 0 0.4rem;
 }
 
-.footer-inner p {
-  margin: 0.2rem 0;
+.footer-desc {
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 340px;
+}
+
+.footer-heading {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+  color: var(--turquoise);
+  margin: 0 0 0.5rem;
+}
+
+.footer-insta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+  font-weight: 500;
+  color: var(--moutarde);
+}
+
+.footer-insta:hover {
+  color: var(--surface);
+}
+
+.footer-link {
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.footer-link:hover {
+  color: var(--moutarde);
+  border-bottom-color: var(--moutarde);
+}
+
+.footer-ffme {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9rem;
+  margin-top: 0.7rem;
 }
 
 .footer-fineprint {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.55);
-  margin-top: 1rem;
+  margin: 2.2rem 0 0;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 760px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 1.6rem;
+  }
 }
 
 @media (max-width: 640px) {
