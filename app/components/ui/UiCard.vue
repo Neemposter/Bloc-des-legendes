@@ -16,7 +16,7 @@ defineProps<{
       <div class="ui-card-image">
         <img v-if="imageUrl" :src="imageUrl" :alt="''" loading="lazy">
         <span v-else class="ui-card-placeholder" aria-hidden="true">
-          <i class="hold" />
+          <UiWall />
         </span>
       </div>
       <div class="ui-card-body">
@@ -62,18 +62,12 @@ defineProps<{
 .ui-card-placeholder {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.ui-card-placeholder .hold {
-  width: 56px;
-  height: 48px;
-  background: var(--moutarde);
-  border-radius: 55% 45% 60% 40% / 50% 60% 40% 50%;
-  opacity: 0.55;
-  transform: rotate(-12deg);
+.ui-card-placeholder :deep(svg) {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .ui-card-body {
