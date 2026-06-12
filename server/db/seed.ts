@@ -1,5 +1,5 @@
 import { hashPassword } from '../utils/password'
-import { articles, settings, timeSlots, users } from './schema'
+import { articles, events, settings, timeSlots, users } from './schema'
 import type { useDb } from '../utils/db'
 
 type Db = ReturnType<typeof useDb>
@@ -33,6 +33,41 @@ export function seedIfEmpty(db: Db) {
       { day: 'tuesday', startTime: '18:30', endTime: '20:30', groupName: 'Jeunes — école d\'escalade', instructor: null, capacity: 0 },
       { day: 'thursday', startTime: '21:00', endTime: '23:00', groupName: 'Adultes', instructor: null, capacity: 0 },
       { day: 'saturday', startTime: '09:00', endTime: '12:00', groupName: 'Tous niveaux', instructor: null, capacity: 0 },
+    ]).run()
+  }
+
+  if (db.select().from(events).all().length === 0) {
+    db.insert(events).values([
+      {
+        title: 'Sortie falaise — Côte nord',
+        description: 'Sortie annuelle en falaise sur les côtes du Finistère nord. Tous niveaux, encadrement assuré par les bénévoles diplômés.',
+        date: '2026-09-13',
+        startTime: '09:00',
+        endTime: '18:00',
+        location: 'Presqu\'île de Crozon',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        title: 'Championnat départemental bloc',
+        description: 'Compétition officielle FFME, catégories jeunes et adultes.',
+        date: '2026-10-04',
+        startTime: '09:00',
+        endTime: '17:00',
+        location: 'Brest',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        title: 'Contest interne de fin de saison',
+        description: 'Ambiance décontractée, buvette et remise de prix maison.',
+        date: '2026-11-22',
+        startTime: '14:00',
+        endTime: '20:00',
+        location: 'Salle des sports Bodénès, Lesneven',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]).run()
   }
 
