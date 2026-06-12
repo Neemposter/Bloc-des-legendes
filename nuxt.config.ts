@@ -1,6 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
+  runtimeConfig: {
+    // Override in production: NUXT_SESSION_SECRET (must be ≥ 32 chars)
+    sessionSecret: 'dev-session-secret-change-me-in-prod-00',
+  },
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   app: {

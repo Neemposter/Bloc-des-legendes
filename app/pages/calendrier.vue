@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { TimeSlot, Weekday } from '~~/shared/types'
+import type { ClubEvent, TimeSlot, Weekday } from '~~/shared/types'
 
 useHead({ title: 'Calendrier des séances — Bloc des Légendes' })
 
 const { data } = await useFetch<TimeSlot[]>('/api/time-slots')
+const { data: upcomingEvents } = await useFetch<ClubEvent[]>('/api/events')
 const slots = computed(() => data.value ?? [])
 
 const DAYS: { key: Weekday, label: string }[] = [
@@ -57,6 +58,11 @@ function slotStyle(slot: TimeSlot) {
   const top = (toMinutes(slot.startTime) - minMinutes.value) * PX_PER_MIN
   const height = (toMinutes(slot.endTime) - toMinutes(slot.startTime)) * PX_PER_MIN
   return { top: `${top}px`, height: `${height}px` }
+}
+
+function fmtEventDate(date: string) {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 // slotCategory : util partagé avec l'accueil (app/utils/slots.ts)
@@ -132,6 +138,32 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
       Une question sur un créneau ou un essai gratuit ?
       <NuxtLink to="/contact" class="cal-footnote-link">Écrivez-nous</NuxtLink>.
     </p>
+    </div>
+
+    <!-- Événements ponctuels -->
+    <div v-if="upcomingEvents?.length" class="container events-section">
+      <h2 class="events-title">Événements à venir</h2>
+      <ul class="events-list">
+        <li v-for="ev in upcomingEvents" :key="ev.id" class="event-card">
+          <div class="event-date-block">
+            <span class="event-day">{{ ev.date.split('-')[2] }}</span>
+            <span class="event-month">
+              {{ new Date(ev.date + 'T00:00:00').toLocaleDateString('fr-FR', { month: 'short' }) }}
+            </span>
+          </div>
+          <div class="event-info">
+            <p class="event-name">{{ ev.title }}</p>
+            <p class="event-when">
+              {{ fmtEventDate(ev.date) }}
+              <template v-if="ev.startTime">
+                · {{ ev.startTime }}<template v-if="ev.endTime"> – {{ ev.endTime }}</template>
+              </template>
+            </p>
+            <p v-if="ev.location" class="event-where">📍 {{ ev.location }}</p>
+            <p v-if="ev.description" class="event-desc">{{ ev.description }}</p>
+          </div>
+        </li>
+      </ul>
     </div>
   </div>
 </template>
@@ -301,6 +333,91 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
   color: var(--turquoise);
   font-weight: 500;
   border-bottom: 1px solid currentColor;
+}
+
+/* ── Événements ponctuels ─────────────────── */
+.events-section {
+  margin-top: 3rem;
+  padding-bottom: 2rem;
+}
+
+.events-title {
+  font-size: 1.5rem;
+  margin: 0 0 1.2rem;
+}
+
+.events-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.event-card {
+  display: flex;
+  gap: 1.2rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.1rem 1.4rem;
+  align-items: flex-start;
+}
+
+.event-date-block {
+  flex-shrink: 0;
+  width: 3.2rem;
+  background: color-mix(in srgb, var(--turquoise) 10%, white);
+  border-radius: 10px;
+  padding: 0.4rem 0.2rem;
+  text-align: center;
+}
+
+.event-day {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.event-month {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-top: 0.1rem;
+}
+
+.event-info { flex: 1; min-width: 0; }
+
+.event-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 0 0 0.2rem;
+}
+
+.event-when {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin: 0 0 0.2rem;
+  text-transform: capitalize;
+}
+
+.event-where {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  margin: 0 0 0.35rem;
+}
+
+.event-desc {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
 }
 
 @media (max-width: 900px) {

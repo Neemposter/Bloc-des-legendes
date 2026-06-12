@@ -20,6 +20,19 @@ export interface TimeSlot {
   capacity: number
 }
 
+// Miroir des lignes de la table events
+export interface ClubEvent {
+  id: number
+  title: string
+  description: string | null
+  date: string // YYYY-MM-DD
+  startTime: string | null // HH:MM
+  endTime: string | null // HH:MM
+  location: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 // Miroir des lignes de la table articles
 export interface Article {
   id: number
