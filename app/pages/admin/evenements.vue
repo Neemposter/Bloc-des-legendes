@@ -112,6 +112,16 @@ function fmtDate(iso: string) {
   const [y, m, d] = iso.split('-').map(Number)
   return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
+
+// Pastille date : jour + mois abrégé (le mois complet + année déborde des 3.5rem)
+function chipDay(iso: string) {
+  return Number(iso.split('-')[2])
+}
+
+function chipMonth(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { month: 'short' })
+}
 </script>
 
 <template>
@@ -127,9 +137,9 @@ function fmtDate(iso: string) {
     <!-- Liste -->
     <div class="event-list">
       <div v-for="ev in events" :key="ev.id" class="event-row" :class="{ 'event-row--past': isPast(ev.date) }">
-        <div class="event-date-col">
-          <span class="event-day">{{ fmtDate(ev.date).split(' ')[0] }}</span>
-          <span class="event-month">{{ fmtDate(ev.date).slice(fmtDate(ev.date).indexOf(' ') + 1) }}</span>
+        <div class="event-date-col" :title="fmtDate(ev.date)">
+          <span class="event-day">{{ chipDay(ev.date) }}</span>
+          <span class="event-month">{{ chipMonth(ev.date) }}</span>
         </div>
         <div class="event-body">
           <p class="event-title">{{ ev.title }}</p>
