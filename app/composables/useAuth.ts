@@ -1,9 +1,12 @@
 export const useAuth = () => {
   const user = useState<{ userId: number; email: string } | null>('admin-user', () => null)
+  // useRequestFetch : en SSR, $fetch ne transmet pas les cookies de la requête
+  // entrante → /api/auth/me répondait 401 au refresh d'une page admin
+  const requestFetch = useRequestFetch()
 
   async function fetchUser() {
     try {
-      user.value = await $fetch('/api/auth/me')
+      user.value = await requestFetch('/api/auth/me')
     }
     catch {
       user.value = null
