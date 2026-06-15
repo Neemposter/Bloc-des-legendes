@@ -17,6 +17,9 @@ const { user, logout } = useAuth()
           <NuxtLink to="/admin" class="admin-nav-link">Tableau de bord</NuxtLink>
           <NuxtLink to="/admin/articles" class="admin-nav-link">Articles</NuxtLink>
           <NuxtLink to="/admin/evenements" class="admin-nav-link">Événements</NuxtLink>
+          <NuxtLink to="/admin/creneaux" class="admin-nav-link">Créneaux</NuxtLink>
+          <NuxtLink to="/admin/messages" class="admin-nav-link">Messages</NuxtLink>
+          <NuxtLink to="/admin/parametres" class="admin-nav-link">Paramètres</NuxtLink>
           <NuxtLink to="/" target="_blank" class="admin-nav-link admin-nav-link--muted">← Site public</NuxtLink>
         </nav>
 
