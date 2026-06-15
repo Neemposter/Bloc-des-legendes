@@ -141,7 +141,7 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
     </div>
 
     <!-- Événements ponctuels -->
-    <div v-if="upcomingEvents?.length" class="container events-section">
+    <div v-if="upcomingEvents?.length" id="evenements" class="container events-section">
       <h2 class="events-title">Événements à venir</h2>
       <ul class="events-list">
         <li v-for="ev in upcomingEvents" :key="ev.id" class="event-card">
@@ -339,6 +339,8 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
 .events-section {
   margin-top: 3rem;
   padding-bottom: 2rem;
+  /* Décale l'ancrage #evenements sous le header sticky */
+  scroll-margin-top: 80px;
 }
 
 .events-title {
