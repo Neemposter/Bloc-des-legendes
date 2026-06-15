@@ -1,10 +1,27 @@
 <script setup lang="ts">
-import type { Article, TimeSlot, Weekday } from '~~/shared/types'
+import type { Article, ClubEvent, TimeSlot, Weekday } from '~~/shared/types'
 
 useHead({ title: 'Bloc des Légendes — Club d\'escalade' })
 
 const { data: articlesData } = await useFetch<Article[]>('/api/articles')
 const { data: slotsData } = await useFetch<TimeSlot[]>('/api/time-slots')
+// /api/events ne renvoie que les événements à venir, triés par date
+const { data: eventsData } = await useFetch<ClubEvent[]>('/api/events')
+const { data: registration } = await useFetch<{ url: string | null }>('/api/registration-link')
+
+const nextEvents = computed(() => (eventsData.value ?? []).slice(0, 3))
+
+function eventDay(date: string) {
+  return Number(date.split('-')[2])
+}
+function eventMonth(date: string) {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { month: 'short' })
+}
+function eventFullDate(date: string) {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
 
 const articles = computed(() => (articlesData.value ?? []).slice(0, 3))
 const featured = computed(() => articles.value[0] ?? null)
@@ -159,9 +176,37 @@ function slotClass(slot: TimeSlot): string {
         </div>
       </div>
 
+      <div v-if="nextEvents.length" class="events-teaser">
+        <h3 class="events-title">Événements à venir</h3>
+        <div class="events-list">
+          <NuxtLink v-for="ev in nextEvents" :key="ev.id" to="/calendrier#evenements" class="event-item">
+            <div class="event-chip">
+              <span class="event-chip-day">{{ eventDay(ev.date) }}</span>
+              <span class="event-chip-month">{{ eventMonth(ev.date) }}</span>
+            </div>
+            <div class="event-info">
+              <p class="event-name">{{ ev.title }}</p>
+              <p class="event-meta">{{ eventFullDate(ev.date) }}<template v-if="ev.location"> · {{ ev.location }}</template></p>
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
+
       <div class="cal-cta">
         <UiButton to="/calendrier">Voir le calendrier complet</UiButton>
       </div>
+    </div>
+  </section>
+
+  <!-- ─── CTA INSCRIPTION ───────────────────────────────────── -->
+  <section v-if="registration?.url" class="cta-join">
+    <div class="container cta-join-inner">
+      <div>
+        <p class="section-kicker section-kicker--light">Rejoindre le club</p>
+        <h2>Prêt à grimper avec nous ?</h2>
+        <p class="cta-join-text">Débutant ou confirmé, l'adhésion se fait en ligne en quelques minutes via notre partenaire.</p>
+      </div>
+      <UiButton :href="registration.url" variant="inverse">S'inscrire en ligne</UiButton>
     </div>
   </section>
 
@@ -518,6 +563,123 @@ function slotClass(slot: TimeSlot): string {
 
 .cal-cta {
   text-align: center;
+  margin-top: 2.4rem;
+}
+
+/* ─── ÉVÉNEMENTS À VENIR (sous le planning) ─── */
+.events-teaser {
+  margin-top: 2.6rem;
+}
+
+.events-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 1rem;
+}
+
+.events-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.8rem;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--fond);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.event-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(22, 36, 29, 0.1);
+}
+
+.event-chip {
+  flex-shrink: 0;
+  width: 3rem;
+  text-align: center;
+  background: color-mix(in srgb, var(--ambre) 14%, white);
+  border-radius: 10px;
+  padding: 0.4rem 0.2rem;
+}
+
+.event-chip-day {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.event-chip-month {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-top: 0.1rem;
+}
+
+.event-info { min-width: 0; }
+
+.event-name {
+  font-weight: 500;
+  margin: 0 0 0.1rem;
+}
+
+.event-meta {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* ─── CTA INSCRIPTION ─── */
+.cta-join {
+  background: var(--turquoise);
+  padding: 4rem 0;
+}
+
+.cta-join-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.cta-join h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+  color: #fff;
+  margin: 0 0 0.5rem;
+}
+
+.cta-join-text {
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 440px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.section-kicker--light {
+  color: #fff;
+}
+
+.section-kicker--light::before {
+  background: #fff;
 }
 
 /* ─── RESPONSIVE ─── */
