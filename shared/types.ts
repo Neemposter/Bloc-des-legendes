@@ -46,3 +46,14 @@ export interface Article {
   updatedAt: string
   authorId: number
 }
+
+// Miroir des lignes de la table contact_messages
+export interface ContactMessage {
+  id: number
+  name: string
+  email: string
+  subject: string | null
+  message: string
+  isRead: boolean
+  createdAt: string
+}
