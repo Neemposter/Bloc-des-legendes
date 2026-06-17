@@ -47,6 +47,19 @@ export const contactMessages = sqliteTable('contact_messages', {
   createdAt: text('created_at').notNull(),
 })
 
+// Événements ponctuels (compétitions, sorties falaise, contests…)
+export const events = sqliteTable('events', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  title: text('title').notNull(),
+  description: text('description'),
+  date: text('date').notNull(), // YYYY-MM-DD
+  startTime: text('start_time'), // HH:MM, optionnel
+  endTime: text('end_time'),   // HH:MM, optionnel
+  location: text('location'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 // Config éditable en admin, ex : key = registration_link
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),

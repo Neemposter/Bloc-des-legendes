@@ -13,6 +13,7 @@
           <NuxtLink to="/actualites">Actualités</NuxtLink>
           <NuxtLink to="/calendrier">Calendrier</NuxtLink>
           <NuxtLink to="/contact">Contact</NuxtLink>
+          <NuxtLink to="/admin" class="nav-admin">Admin</NuxtLink>
         </nav>
       </div>
     </header>
@@ -142,6 +143,11 @@
 .site-nav a.router-link-active {
   border-bottom-color: var(--turquoise);
   font-weight: 500;
+}
+
+.nav-admin {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
 }
 
 .site-main {

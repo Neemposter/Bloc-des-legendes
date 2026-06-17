@@ -1,6 +1,9 @@
 <script setup lang="ts">
 useHead({ title: 'Contact — Bloc des Légendes' })
 
+// Lien d'inscription externe, modifiable depuis l'admin (settings)
+const { data: registration } = await useFetch<{ url: string | null }>('/api/registration-link')
+
 const form = reactive({ name: '', email: '', subject: '', message: '' })
 const status = ref<'idle' | 'sending' | 'success' | 'error'>('idle')
 const errorMessage = ref('')
@@ -48,7 +51,14 @@ async function onSubmit() {
         </p>
       </form>
 
-      <aside class="contact-infos">
+      <aside class="contact-side">
+        <div v-if="registration?.url" class="contact-join">
+          <h3>Rejoindre le club</h3>
+          <p>Prêt à grimper avec nous ? L'adhésion se fait en ligne via notre partenaire.</p>
+          <UiButton :href="registration.url">S'inscrire en ligne</UiButton>
+        </div>
+
+        <div class="contact-infos">
         <h3>Le club</h3>
         <p>
           Bloc des Légendes<br>
@@ -66,6 +76,7 @@ async function onSubmit() {
           Club affilié FFME n° 029020 · Ouvert dès 6 ans · Prêt de matériel ·
           Accueil des personnes en situation de handicap
         </p>
+        </div>
       </aside>
     </div>
   </div>
@@ -107,6 +118,30 @@ async function onSubmit() {
 .is-sending {
   opacity: 0.7;
   pointer-events: none;
+}
+
+.contact-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.contact-join {
+  background: var(--turquoise);
+  border-radius: 14px;
+  padding: 1.5rem 1.6rem;
+  color: #fff;
+}
+
+.contact-join h3 {
+  color: #fff;
+  margin-bottom: 0.4rem;
+}
+
+.contact-join p {
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.55;
+  margin: 0 0 1.1rem;
 }
 
 .contact-infos {
