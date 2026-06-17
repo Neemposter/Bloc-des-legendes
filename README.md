@@ -1,156 +1,464 @@
-# Bloc des Légendes — Site du club d'escalade
+# Bloc des Légendes — Guide développeur
 
-Site vitrine du club associatif d'escalade Bloc des Légendes (Nuxt 4 + SQLite/Drizzle).
+Site web du club associatif d'escalade **Bloc des Légendes** (Lesneven, 29).  
+Stack : **Nuxt 4** · **SQLite** · **Drizzle ORM** · TypeScript.
 
-## Setup
+---
+
+## Sommaire
+
+1. [Démarrage rapide](#1-démarrage-rapide)
+2. [Structure du projet](#2-structure-du-projet)
+3. [Base de données](#3-base-de-données)
+4. [API — référence complète](#4-api--référence-complète)
+5. [Authentification admin](#5-authentification-admin)
+6. [Frontend — conventions](#6-frontend--conventions)
+7. [Back-office admin](#7-back-office-admin)
+8. [Mise en production](#8-mise-en-production)
+9. [Dépannage](#9-dépannage)
+
+---
+
+## 1. Démarrage rapide
 
 ```bash
+git clone <repo>
+cd Bloc-des-legendes
 npm install
 npm run dev
 ```
 
-C'est tout. Au premier démarrage, le serveur crée la base SQLite (`.data/`),
-applique les migrations et insère des données de démo (créneaux, articles,
-compte admin). Idempotent : ne touche jamais aux tables non vides.
+L'application démarre sur **http://localhost:3000**.
 
-**Compte admin de démo** : `admin@blocdeslegendes.fr` / `blocdeslegendes`
-(⚠️ à changer avant toute mise en ligne).
+Au premier lancement, le serveur :
+1. crée automatiquement la base SQLite dans `.data/`
+2. applique toutes les migrations
+3. insère des données de démo (créneaux, articles, événements, compte admin)
 
-## Conventions pour l'équipe
+Le seed est **idempotent** : il ne touche jamais aux tables déjà remplies.
 
-**Design** — la référence vivante est sur [`/styleguide`](http://localhost:3000/styleguide)
-(palette, typos, composants dans tous leurs états).
+### Compte admin de démo
 
-- Couleurs **uniquement** via les variables CSS (`var(--turquoise)`, etc.) définies
-  dans `app/assets/css/main.css` — jamais de hex en dur dans les pages
-- Composants partagés dans `app/components/ui/` (auto-importés) :
-  `UiButton`, `UiCard`, `UiSectionTitle`, `UiInput`, `UiTextarea`.
-  Un besoin récurrent → nouveau composant `Ui*`, pas du copier-coller
-- Chaque page commence par `UiSectionTitle` et est wrappée dans `.container`
+| Email | Mot de passe |
+|---|---|
+| `admin@blocdeslegendes.fr` | `blocdeslegendes` |
 
-**Pages** — il reste un bloc `TODO(...)` en tête de `admin/index.vue` qui décrit
-le travail back-office restant. Pas de page inscription : décision d'équipe,
-l'inscription se fait hors site (le lien externe reste géré en base via
-`settings.registration_link` pour le futur back-office).
+> ⚠️ À changer **avant toute mise en ligne** (voir [section 8](#8-mise-en-production)).
 
-**Routes API** — exemple minimal avec la base :
+### Scripts disponibles
+
+| Commande | Rôle |
+|---|---|
+| `npm run dev` | Serveur de développement avec hot-reload |
+| `npm run build` | Build de production |
+| `npm run preview` | Prévisualisation du build de production |
+| `npm run db:generate` | Génère une migration après modification du schéma |
+| `npm run db:studio` | Ouvre Drizzle Studio (interface graphique sur la base) |
+
+---
+
+## 2. Structure du projet
+
+```
+Bloc-des-legendes/
+│
+├── app/                          # Frontend (Nuxt 4 / Vue 3)
+│   ├── assets/css/main.css       # Variables CSS de la charte graphique
+│   ├── components/ui/            # Composants partagés (auto-importés)
+│   ├── composables/
+│   │   └── useAuth.ts            # État de session admin (useState)
+│   ├── layouts/
+│   │   ├── default.vue           # Layout public (header + footer)
+│   │   └── admin.vue             # Layout back-office (barre admin)
+│   ├── middleware/
+│   │   └── admin.global.ts       # Garde de route : redirige /admin/* si non connecté
+│   └── pages/
+│       ├── index.vue             # Accueil
+│       ├── actualites/           # Liste + détail des articles
+│       ├── calendrier.vue        # Planning hebdomadaire + événements à venir
+│       ├── contact.vue           # Formulaire de contact
+│       └── admin/
+│           ├── login.vue         # Page de connexion
+│           ├── index.vue         # Tableau de bord
+│           ├── articles.vue      # Gestion des articles
+│           └── evenements.vue    # Gestion des événements
+│
+├── server/                       # Backend (Nitro)
+│   ├── api/                      # Endpoints publics
+│   │   ├── articles.get.ts
+│   │   ├── articles/[id].get.ts
+│   │   ├── events.get.ts
+│   │   ├── time-slots.get.ts
+│   │   ├── registration-link.get.ts
+│   │   ├── contact.post.ts
+│   │   └── auth/
+│   │       ├── login.post.ts
+│   │       ├── logout.post.ts
+│   │       └── me.get.ts
+│   ├── api/admin/                # Endpoints protégés (session requise)
+│   │   ├── articles/
+│   │   ├── events/
+│   │   ├── time-slots/
+│   │   ├── messages/
+│   │   └── settings/
+│   ├── db/
+│   │   ├── schema.ts             # Source de vérité du schéma (à modifier ici)
+│   │   ├── seed.ts               # Données de démo
+│   │   └── migrations/           # Fichiers SQL auto-générés par Drizzle
+│   ├── middleware/
+│   │   └── admin-auth.ts         # Vérifie la session pour /api/admin/*
+│   ├── plugins/
+│   │   └── database.ts           # Lance migrations + seed au démarrage
+│   └── utils/
+│       ├── db.ts                 # Singleton de connexion SQLite
+│       ├── password.ts           # Hash/vérification scrypt
+│       └── session.ts            # useAdminSession() — wrapper H3
+│
+├── shared/
+│   └── types.ts                  # Types TypeScript partagés front/back
+│
+├── nuxt.config.ts
+├── drizzle.config.ts
+└── package.json
+```
+
+---
+
+## 3. Base de données
+
+### Schéma
+
+Le schéma est défini dans `server/db/schema.ts`. C'est la **seule source de vérité** — ne jamais modifier les fichiers SQL de migration à la main.
+
+| Table | Rôle |
+|---|---|
+| `users` | Comptes admin (email + hash scrypt) |
+| `articles` | Actualités du club (draft / published) |
+| `events` | Événements ponctuels (compétitions, sorties…) |
+| `time_slots` | Planning hebdomadaire récurrent |
+| `contact_messages` | Messages du formulaire de contact |
+| `settings` | Configuration clé/valeur (ex : lien d'inscription) |
+
+### Modifier le schéma
+
+```bash
+# 1. Éditer server/db/schema.ts
+# 2. Générer la migration
+npm run db:generate
+# 3. Relancer le serveur (la migration s'applique au démarrage)
+npm run dev
+```
+
+### Réinitialiser complètement
+
+```bash
+rm -rf .data/
+npm run dev   # recrée la base et reseed
+```
+
+### Explorer la base en développement
+
+```bash
+npm run db:studio   # ouvre Drizzle Studio sur http://local.drizzle.studio
+```
+
+### Créer un compte admin manuellement
+
+Si la base est déjà initialisée et que vous voulez ajouter un compte sans passer par le seed :
+
+```bash
+node -e "
+const Database = require('better-sqlite3');
+const { randomBytes, scryptSync } = require('crypto');
+const db = new Database('.data/blocdeslegendes.sqlite');
+const salt = randomBytes(16).toString('hex');
+const hash = scryptSync('VOTRE_MOT_DE_PASSE', salt, 64).toString('hex');
+db.prepare('INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)').run('email@exemple.fr', salt+':'+hash, new Date().toISOString());
+db.close();
+console.log('Compte créé.');
+"
+```
+
+---
+
+## 4. API — référence complète
+
+### Endpoints publics
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/articles` | Articles publiés, triés par date de publication |
+| `GET` | `/api/articles/:id` | Article publié par ID (404 si brouillon) |
+| `GET` | `/api/events` | Événements à venir (date ≥ aujourd'hui), triés par date |
+| `GET` | `/api/time-slots` | Tous les créneaux récurrents |
+| `GET` | `/api/registration-link` | Lien d'inscription externe (HelloAsso) |
+| `POST` | `/api/contact` | Envoie un message de contact |
+| `POST` | `/api/auth/login` | Connexion admin — pose un cookie de session |
+| `POST` | `/api/auth/logout` | Déconnexion — efface la session |
+| `GET` | `/api/auth/me` | Retourne l'utilisateur courant ou 401 |
+
+### Endpoints admin (session requise)
+
+Tous les endpoints `/api/admin/*` renvoient `401` si aucune session valide n'est présente.
+
+#### Articles
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/admin/articles` | Tous les articles (brouillons inclus) |
+| `POST` | `/api/admin/articles` | Créer un article |
+| `GET` | `/api/admin/articles/:id` | Article par ID |
+| `PUT` | `/api/admin/articles/:id` | Modifier (mise à jour partielle) |
+| `DELETE` | `/api/admin/articles/:id` | Supprimer |
+
+Corps `POST`/`PUT` :
+```json
+{
+  "title": "string (requis)",
+  "summary": "string (requis)",
+  "content": "string (requis)",
+  "imageUrl": "string | null",
+  "status": "draft | published"
+}
+```
+
+#### Événements
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/admin/events` | Tous les événements, triés par date |
+| `POST` | `/api/admin/events` | Créer un événement |
+| `PUT` | `/api/admin/events/:id` | Modifier (mise à jour partielle) |
+| `DELETE` | `/api/admin/events/:id` | Supprimer |
+
+Corps `POST`/`PUT` :
+```json
+{
+  "title": "string (requis)",
+  "date": "YYYY-MM-DD (requis)",
+  "startTime": "HH:MM | null",
+  "endTime": "HH:MM | null",
+  "location": "string | null",
+  "description": "string | null"
+}
+```
+
+#### Créneaux
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/admin/time-slots` | Tous les créneaux |
+| `POST` | `/api/admin/time-slots` | Créer un créneau |
+| `PUT` | `/api/admin/time-slots/:id` | Modifier |
+| `DELETE` | `/api/admin/time-slots/:id` | Supprimer |
+
+#### Messages de contact
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/admin/messages` | Tous les messages (`?unread=true` pour filtrer) |
+| `PATCH` | `/api/admin/messages/:id` | Marquer lu/non-lu (`{ "isRead": boolean }`) |
+
+#### Paramètres
+
+| Méthode | Route | Description |
+|---|---|---|
+| `PUT` | `/api/admin/settings/:key` | Modifier une valeur de config |
+
+Clés autorisées : `registration_link`.  
+Corps : `{ "value": "https://..." }`
+
+### Ajouter un endpoint
 
 ```ts
 // server/api/exemple.get.ts
 import { articles } from '../db/schema'
 
 export default defineEventHandler(() => {
-  const db = useDb() // auto-importé
+  const db = useDb()         // auto-importé depuis server/utils/db.ts
   return db.select().from(articles).all()
 })
 ```
 
-**Workflow base de données** : modifier `server/db/schema.ts` →
-`npm run db:generate` → relancer le dev server (les migrations s'appliquent
-au démarrage). Ne jamais éditer un fichier de migration à la main.
+Pour un endpoint admin protégé, le placer dans `server/api/admin/` — le middleware `server/middleware/admin-auth.ts` vérifie automatiquement la session.
 
-## Base de données
+---
 
-- Schéma : `server/db/schema.ts` (source de vérité, dérivé du MLD)
-- Migrations : `server/db/migrations/` — générées avec `npm run db:generate`
-  après modification du schéma, appliquées automatiquement au démarrage
-  (`server/plugins/database.ts`)
-- Seed : `server/db/seed.ts`
-- Explorer la base : `npm run db:studio` (Drizzle Studio)
-- Reset complet : supprimer le dossier `.data/` et relancer `npm run dev`
+## 5. Authentification admin
 
-## Dépannage : binding natif introuvable
+L'authentification repose sur des **cookies de session chiffrés** (H3 `useSession`), sans base de tokens externe.
 
-Si `npm install` échoue avec `Cannot find module '@rolldown/binding-...'`
-([bug npm sur les dépendances optionnelles](https://github.com/npm/cli/issues/4828)) :
+### Flux
 
-les binaires natifs de rolldown et oxc-parser sont épinglés en
-`optionalDependencies` dans `package.json` (win32 / macOS / linux), ce qui
-empêche npm de les supprimer. Si l'erreur revient malgré tout :
+```
+POST /api/auth/login
+  → vérifie email + mot de passe (scrypt)
+  → écrit un cookie de session chiffré (8h)
+  → retourne { ok: true, email }
+
+GET /api/auth/me
+  → lit la session
+  → retourne { userId, email } ou 401
+
+POST /api/auth/logout
+  → efface la session
+```
+
+### Secret de session
+
+Le secret est lu depuis `runtimeConfig.sessionSecret` (minimum 32 caractères).  
+En développement, une valeur par défaut est utilisée.  
+En production, définir la variable d'environnement :
+
+```bash
+NUXT_SESSION_SECRET=une-chaine-aleatoire-de-au-moins-32-caracteres
+```
+
+### Côté frontend
+
+Le composable `useAuth()` (`app/composables/useAuth.ts`) expose :
+
+```ts
+const { user, fetchUser, login, logout } = useAuth()
+```
+
+- `user` — `Ref<{ userId, email } | null>`, partagé SSR/client via `useState`
+- `fetchUser()` — interroge `/api/auth/me` et met à jour `user`
+- `login(email, password)` — appelle l'API puis `fetchUser()`
+- `logout()` — appelle l'API, vide `user`, redirige vers `/admin/login`
+
+Le middleware `app/middleware/admin.global.ts` protège toutes les routes `/admin/*` (sauf `/admin/login`) et redirige les visiteurs non connectés.
+
+---
+
+## 6. Frontend — conventions
+
+### Design system
+
+La référence vivante est accessible sur **`/styleguide`** (lancer le dev server).  
+Palette, typographie et composants dans tous leurs états.
+
+**Règle absolue** : toutes les couleurs passent par les variables CSS définies dans `app/assets/css/main.css`. Jamais de valeur hex en dur dans les composants.
+
+| Variable | Usage |
+|---|---|
+| `--turquoise` | Couleur principale, CTAs |
+| `--moutarde` / `--olive` | Accents secondaires |
+| `--ambre` | Alertes, badges |
+| `--ink` / `--ink-soft` | Texte |
+| `--fond` | Fond de page |
+| `--surface` | Fond des cartes/panels |
+| `--line` | Bordures |
+
+### Composants UI
+
+Tous les composants du dossier `app/components/ui/` sont auto-importés.
+
+| Composant | Usage |
+|---|---|
+| `UiButton` | Bouton (variants : `primary`, `secondary`, `ghost`, `inverse`) |
+| `UiCard` | Carte générique |
+| `UiSectionTitle` | En-tête de section (kicker + titre + lede) |
+| `UiInput` | Champ texte avec label |
+| `UiTextarea` | Zone de texte avec label |
+| `UiArticleBanner` | Bannière d'article |
+| `UiPageHero` | Hero de page |
+| `UiWall` | Fond mur d'escalade |
+
+### Layouts
+
+| Layout | Appliqué à |
+|---|---|
+| `default` | Toutes les pages publiques (header nav + footer) |
+| `admin` | Pages du back-office (`definePageMeta({ layout: 'admin' })`) |
+| `false` | Page login (`definePageMeta({ layout: false })`) |
+
+### Types partagés
+
+Les interfaces TypeScript communes au frontend et au backend sont dans `shared/types.ts` : `Article`, `ClubEvent`, `TimeSlot`, `Weekday`, `ArticleStatus`.
+
+---
+
+## 7. Back-office admin
+
+Accessible sur **`/admin`** (redirige vers `/admin/login` si non connecté).
+
+| Page | Route | Fonctionnalités |
+|---|---|---|
+| Connexion | `/admin/login` | Formulaire email + mot de passe |
+| Tableau de bord | `/admin` | Stats, derniers articles, prochains événements |
+| Articles | `/admin/articles` | Liste, création, modification, suppression |
+| Événements | `/admin/evenements` | Liste, création, modification, suppression |
+
+### Ce qui n'est pas encore dans le back-office
+
+- Lecture des messages de contact (API prête : `GET /api/admin/messages`)
+- Modification du lien d'inscription (API prête : `PUT /api/admin/settings/registration_link`)
+- Gestion des créneaux récurrents (API prête : CRUD `/api/admin/time-slots`)
+- Gestion des comptes admin (pas d'interface, utiliser le script de la section 3)
+
+---
+
+## 8. Mise en production
+
+### Variables d'environnement
+
+| Variable | Obligatoire | Description |
+|---|---|---|
+| `NUXT_SESSION_SECRET` | ✅ | Secret de chiffrement des sessions (≥ 32 chars) |
+| `DB_PATH` | Non | Chemin vers le fichier SQLite (défaut : `.data/blocdeslegendes.sqlite`) |
+
+### Build et démarrage
+
+```bash
+npm run build
+node .output/server/index.mjs
+```
+
+### Checklist avant mise en ligne
+
+- [ ] Changer le mot de passe du compte admin de démo
+- [ ] Définir `NUXT_SESSION_SECRET` avec une vraie valeur aléatoire
+- [ ] S'assurer que le dossier `.data/` est persistant (non effacé entre les déploiements)
+- [ ] Ajouter `.data/` au `.gitignore` (déjà fait)
+- [ ] Déposer les polices de la charte dans `public/fonts/` (voir `public/fonts/README.md`)
+
+### Polices de la charte
+
+Les polices officielles **Moon Get** et **Coolvetica** ne sont pas incluses dans le dépôt.  
+Déposer les fichiers `.woff2` et `.ttf` dans `public/fonts/`.  
+En leur absence, des polices Google Fonts (Quicksand / Jost) sont utilisées en fallback.
+
+---
+
+## 9. Dépannage
+
+### `Cannot find module '@rolldown/binding-...'`
+
+Bug npm avec les dépendances optionnelles. Solution :
 
 ```bash
 rm -rf node_modules package-lock.json
 npm install
 ```
 
-⚠️ Les versions épinglées doivent suivre celles de `rolldown` et `oxc-parser`
-lors des montées de version de Nuxt (`npm ls rolldown oxc-parser`).
-
-## Polices de la charte
-
-Déposer les fichiers Moon get / Coolvetica dans `public/fonts/` (cf. `public/fonts/README.md`).
-En leur absence, des fallbacks Google Fonts sont utilisés.
-
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
-
-## Setup
-
-Make sure to install dependencies:
+Les binaires natifs de rolldown et oxc-parser sont épinglés dans `optionalDependencies` pour éviter ce problème. Vérifier leurs versions lors d'une mise à jour de Nuxt :
 
 ```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
+npm ls rolldown oxc-parser
 ```
 
-## Development Server
+### La base ne se crée pas au démarrage
 
-Start the development server on `http://localhost:3000`:
+Vérifier que le dossier parent de `DB_PATH` est accessible en écriture. Par défaut `.data/` est créé automatiquement dans le répertoire du projet.
+
+### Réinitialiser la base (dev)
 
 ```bash
-# npm
+rm -rf .data/
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+### Erreur de session en prod (`password must be at least 32 characters`)
 
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+La variable `NUXT_SESSION_SECRET` n'est pas définie ou fait moins de 32 caractères.
