@@ -52,7 +52,8 @@ export const events = sqliteTable('events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull(),
   description: text('description'),
-  date: text('date').notNull(), // YYYY-MM-DD
+  date: text('date').notNull(), // YYYY-MM-DD (date de début)
+  endDate: text('end_date'), // YYYY-MM-DD, optionnel (événement sur plusieurs jours)
   startTime: text('start_time'), // HH:MM, optionnel
   endTime: text('end_time'),   // HH:MM, optionnel
   location: text('location'),

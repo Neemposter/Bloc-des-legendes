@@ -22,6 +22,16 @@ function eventFullDate(date: string) {
   const [y, m, d] = date.split('-').map(Number)
   return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 }
+// Date ou plage (« 26–28 octobre ») pour un événement multi-jours
+function eventDateLabel(ev: ClubEvent) {
+  if (!ev.endDate || ev.endDate === ev.date) return eventFullDate(ev.date)
+  const [sy, sm, sd] = ev.date.split('-').map(Number)
+  const [ey, em, ed] = ev.endDate.split('-').map(Number)
+  if (sy === ey && sm === em) {
+    return `${sd}–${ed} ${new Date(ey!, em! - 1, ed!).toLocaleDateString('fr-FR', { month: 'long' })}`
+  }
+  return `${eventFullDate(ev.date)} – ${eventFullDate(ev.endDate)}`
+}
 
 const articles = computed(() => (articlesData.value ?? []).slice(0, 3))
 const featured = computed(() => articles.value[0] ?? null)
@@ -186,7 +196,7 @@ function slotClass(slot: TimeSlot): string {
             </div>
             <div class="event-info">
               <p class="event-name">{{ ev.title }}</p>
-              <p class="event-meta">{{ eventFullDate(ev.date) }}<template v-if="ev.location"> · {{ ev.location }}</template></p>
+              <p class="event-meta">{{ eventDateLabel(ev) }}<template v-if="ev.location"> · {{ ev.location }}</template></p>
             </div>
           </NuxtLink>
         </div>

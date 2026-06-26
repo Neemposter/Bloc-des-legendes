@@ -5,6 +5,7 @@ interface EventBody {
   title?: string
   description?: string | null
   date?: string
+  endDate?: string | null
   startTime?: string | null
   endTime?: string | null
   location?: string | null
@@ -21,13 +22,18 @@ export default defineEventHandler(async (event) => {
   if (!existing) throw createError({ statusCode: 404, message: 'Événement introuvable.' })
 
   if (body.date && !body.date.match(/^\d{4}-\d{2}-\d{2}$/)) throw createError({ statusCode: 422, message: 'Date invalide (YYYY-MM-DD).' })
+  const endDate = 'endDate' in body ? (body.endDate?.trim() || null) : existing.endDate
+  if (endDate && !endDate.match(/^\d{4}-\d{2}-\d{2}$/)) throw createError({ statusCode: 422, message: 'Date de fin invalide (YYYY-MM-DD).' })
+  const startDate = body.date ?? existing.date
+  if (endDate && endDate < startDate) throw createError({ statusCode: 422, message: 'La date de fin doit être après la date de début.' })
   if (body.startTime && !body.startTime.match(/^\d{2}:\d{2}$/)) throw createError({ statusCode: 422, message: 'Heure de début invalide (HH:MM).' })
   if (body.endTime && !body.endTime.match(/^\d{2}:\d{2}$/)) throw createError({ statusCode: 422, message: 'Heure de fin invalide (HH:MM).' })
 
   return db.update(events).set({
     title: body.title?.trim() ?? existing.title,
     description: 'description' in body ? (body.description?.trim() || null) : existing.description,
-    date: body.date ?? existing.date,
+    date: startDate,
+    endDate,
     startTime: 'startTime' in body ? (body.startTime?.trim() || null) : existing.startTime,
     endTime: 'endTime' in body ? (body.endTime?.trim() || null) : existing.endTime,
     location: 'location' in body ? (body.location?.trim() || null) : existing.location,

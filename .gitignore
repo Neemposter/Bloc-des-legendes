@@ -22,3 +22,6 @@ logs
 .env
 .env.*
 !.env.example
+
+# Local task tracking (suivi de tâches personnel, non versionné)
+tasks/
