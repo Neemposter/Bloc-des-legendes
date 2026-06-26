@@ -1,14 +1,12 @@
 import { eq } from 'drizzle-orm'
-import { events } from '../../../db/schema'
+import { eventDays, events } from '../../../db/schema'
+import type { DayInput } from '../../../utils/events'
 
 interface EventBody {
   title?: string
   description?: string | null
-  date?: string
-  endDate?: string | null
-  startTime?: string | null
-  endTime?: string | null
   location?: string | null
+  days: DayInput[]
 }
 
 export default defineEventHandler(async (event) => {
@@ -21,22 +19,28 @@ export default defineEventHandler(async (event) => {
   const existing = db.select().from(events).where(eq(events.id, id)).get()
   if (!existing) throw createError({ statusCode: 404, message: 'Événement introuvable.' })
 
-  if (body.date && !body.date.match(/^\d{4}-\d{2}-\d{2}$/)) throw createError({ statusCode: 422, message: 'Date invalide (YYYY-MM-DD).' })
-  const endDate = 'endDate' in body ? (body.endDate?.trim() || null) : existing.endDate
-  if (endDate && !endDate.match(/^\d{4}-\d{2}-\d{2}$/)) throw createError({ statusCode: 422, message: 'Date de fin invalide (YYYY-MM-DD).' })
-  const startDate = body.date ?? existing.date
-  if (endDate && endDate < startDate) throw createError({ statusCode: 422, message: 'La date de fin doit être après la date de début.' })
-  if (body.startTime && !body.startTime.match(/^\d{2}:\d{2}$/)) throw createError({ statusCode: 422, message: 'Heure de début invalide (HH:MM).' })
-  if (body.endTime && !body.endTime.match(/^\d{2}:\d{2}$/)) throw createError({ statusCode: 422, message: 'Heure de fin invalide (HH:MM).' })
+  const { date, endDate } = validateEventDays(body.days)
 
-  return db.update(events).set({
+  db.update(events).set({
     title: body.title?.trim() ?? existing.title,
     description: 'description' in body ? (body.description?.trim() || null) : existing.description,
-    date: startDate,
-    endDate,
-    startTime: 'startTime' in body ? (body.startTime?.trim() || null) : existing.startTime,
-    endTime: 'endTime' in body ? (body.endTime?.trim() || null) : existing.endTime,
     location: 'location' in body ? (body.location?.trim() || null) : existing.location,
+    date,
+    endDate,
     updatedAt: new Date().toISOString(),
-  }).where(eq(events.id, id)).returning().get()
+  }).where(eq(events.id, id)).run()
+
+  // Remplace les jours
+  db.delete(eventDays).where(eq(eventDays.eventId, id)).run()
+  db.insert(eventDays).values(
+    body.days.map(d => ({
+      eventId: id,
+      date: d.date,
+      startTime: d.startTime?.trim() || null,
+      endTime: d.endTime?.trim() || null,
+    })),
+  ).run()
+
+  const updated = db.select().from(events).where(eq(events.id, id)).get()!
+  return attachDays(db, [updated])[0]
 })

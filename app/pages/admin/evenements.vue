@@ -17,14 +17,25 @@ const form = reactive({
   description: '',
   date: '',
   endDate: '',
-  startTime: '',
-  endTime: '',
   location: '',
 })
 
+// Une ligne par jour de l'événement, avec ses horaires propres
+interface DayRow { date: string, label: string, startTime: string, endTime: string }
+const dayRows = ref<DayRow[]>([])
+
+// Régénère les lignes depuis la plage de dates, en conservant les heures déjà saisies
+function syncDayRows() {
+  const prev = new Map(dayRows.value.map(r => [r.date, r]))
+  dayRows.value = datesBetween(form.date, form.endDate).map(
+    d => prev.get(d) ?? { date: d, label: dayLabel(d), startTime: '', endTime: '' },
+  )
+}
+
 function openCreate() {
   editing.value = null
-  Object.assign(form, { title: '', description: '', date: '', endDate: '', startTime: '', endTime: '', location: '' })
+  Object.assign(form, { title: '', description: '', date: '', endDate: '', location: '' })
+  dayRows.value = []
   formError.value = ''
   showForm.value = true
 }
@@ -36,10 +47,14 @@ function openEdit(ev: ClubEvent) {
     description: ev.description ?? '',
     date: ev.date,
     endDate: ev.endDate ?? '',
-    startTime: ev.startTime ?? '',
-    endTime: ev.endTime ?? '',
     location: ev.location ?? '',
   })
+  dayRows.value = ev.days.map(d => ({
+    date: d.date,
+    label: dayLabel(d.date),
+    startTime: d.startTime ?? '',
+    endTime: d.endTime ?? '',
+  }))
   formError.value = ''
   showForm.value = true
 }
@@ -55,12 +70,19 @@ async function saveEvent() {
     return
   }
   if (!form.date) {
-    formError.value = 'La date est obligatoire.'
+    formError.value = 'La date de début est obligatoire.'
     return
   }
   if (form.endDate && form.endDate < form.date) {
     formError.value = 'La date de fin doit être après la date de début.'
     return
+  }
+  syncDayRows()
+  for (const r of dayRows.value) {
+    if (r.startTime && r.endTime && r.endTime <= r.startTime) {
+      formError.value = `Le ${r.label} : l'heure de fin doit être après l'heure de début.`
+      return
+    }
   }
   saving.value = true
   formError.value = ''
@@ -68,11 +90,12 @@ async function saveEvent() {
     const body = {
       title: form.title,
       description: form.description || null,
-      date: form.date,
-      endDate: form.endDate || null,
-      startTime: form.startTime || null,
-      endTime: form.endTime || null,
       location: form.location || null,
+      days: dayRows.value.map(r => ({
+        date: r.date,
+        startTime: r.startTime || null,
+        endTime: r.endTime || null,
+      })),
     }
     if (editing.value) {
       await $fetch(`/api/admin/events/${editing.value.id}`, { method: 'PUT', body })
@@ -142,6 +165,18 @@ function fmtRange(ev: ClubEvent) {
   const start = new Date(sy!, sm! - 1, sd!)
   return `Du ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
 }
+
+// Résumé des horaires pour la liste : un horaire, « horaires variables », ou rien
+function eventTimesSummary(ev: ClubEvent): string {
+  const timed = ev.days.filter(d => d.startTime)
+  if (!timed.length) return 'Journée entière'
+  const slots = new Set(timed.map(d => `${d.startTime}–${d.endTime ?? ''}`))
+  if (slots.size === 1) {
+    const d = timed[0]!
+    return d.endTime ? `${d.startTime} – ${d.endTime}` : `${d.startTime}`
+  }
+  return 'Horaires variables selon le jour'
+}
 </script>
 
 <template>
@@ -168,8 +203,7 @@ function fmtRange(ev: ClubEvent) {
           </p>
           <p v-if="ev.endDate && ev.endDate !== ev.date" class="event-range">{{ fmtRange(ev) }}</p>
           <p class="event-meta">
-            <template v-if="ev.startTime">{{ ev.startTime }}<template v-if="ev.endTime"> – {{ ev.endTime }}</template></template>
-            <template v-if="ev.location"><template v-if="ev.startTime"> · </template>{{ ev.location }}</template>
+            {{ eventTimesSummary(ev) }}<template v-if="ev.location"> · {{ ev.location }}</template>
           </p>
           <p v-if="isPast(ev.endDate ?? ev.date)" class="event-past-badge">Passé</p>
         </div>
@@ -199,23 +233,22 @@ function fmtRange(ev: ClubEvent) {
             <div class="field-row">
               <div class="field">
                 <label class="field-label">Date de début *</label>
-                <input v-model="form.date" class="field-input" type="date" required />
+                <input v-model="form.date" class="field-input" type="date" required @change="syncDayRows" />
               </div>
               <div class="field">
                 <label class="field-label">Date de fin</label>
-                <input v-model="form.endDate" class="field-input" type="date" :min="form.date || undefined" />
+                <input v-model="form.endDate" class="field-input" type="date" :min="form.date || undefined" @change="syncDayRows" />
               </div>
             </div>
             <p class="field-hint">Laissez la date de fin vide pour un événement sur une seule journée.</p>
 
-            <div class="field-row">
-              <div class="field">
-                <label class="field-label">Heure de début</label>
-                <input v-model="form.startTime" class="field-input" type="time" />
-              </div>
-              <div class="field">
-                <label class="field-label">Heure de fin</label>
-                <input v-model="form.endTime" class="field-input" type="time" />
+            <div v-if="dayRows.length" class="daygrid">
+              <p class="daygrid-label">Horaires par jour <span class="daygrid-hint">(laisser vide = journée entière)</span></p>
+              <div v-for="row in dayRows" :key="row.date" class="dayrow">
+                <span class="dayrow-date">{{ row.label }}</span>
+                <input v-model="row.startTime" class="field-input dayrow-time" type="time" aria-label="Heure de début" />
+                <span class="dayrow-sep">→</span>
+                <input v-model="row.endTime" class="field-input dayrow-time" type="time" aria-label="Heure de fin" />
               </div>
             </div>
 
@@ -493,6 +526,49 @@ function fmtRange(ev: ClubEvent) {
   color: var(--ink-soft);
   margin: -0.4rem 0 0;
 }
+
+.daygrid {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  background: var(--fond);
+}
+
+.daygrid-label {
+  font-weight: 500;
+  font-size: 0.92rem;
+  margin: 0 0 0.7rem;
+}
+
+.daygrid-hint {
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.dayrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.dayrow:last-child { margin-bottom: 0; }
+
+.dayrow-date {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  text-transform: capitalize;
+}
+
+.dayrow-time {
+  width: 7.5rem;
+  flex-shrink: 0;
+  padding: 0.45rem 0.6rem;
+}
+
+.dayrow-sep { color: var(--ink-soft); }
 
 .field-input {
   font-family: var(--font-body);

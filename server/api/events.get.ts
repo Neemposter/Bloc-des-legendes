@@ -6,8 +6,9 @@ export default defineEventHandler(() => {
   const today = new Date().toISOString().slice(0, 10)
   // Un événement reste « à venir » tant que sa date de fin (ou de début si
   // mono-jour) n'est pas passée → on filtre sur end_date ?? date.
-  return db.select().from(events)
+  const rows = db.select().from(events)
     .orderBy(asc(events.date))
     .all()
     .filter(e => (e.endDate ?? e.date) >= today)
+  return attachDays(db, rows)
 })

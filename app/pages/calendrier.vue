@@ -55,15 +55,43 @@ function goToday() {
   weekStart.value = mondayOf(new Date())
 }
 
-// ── Événements posés sur la semaine affichée ───────────────
-function eventsOnDay(iso: string): ClubEvent[] {
-  return (upcomingEvents.value ?? []).filter(e => e.date <= iso && iso <= (e.endDate ?? e.date))
+// ── Occurrences d'événements (un jour précis d'un événement) ──
+interface Occurrence { event: ClubEvent, startTime: string | null, endTime: string | null }
+
+function occurrencesOnDay(iso: string): Occurrence[] {
+  const out: Occurrence[] = []
+  for (const ev of upcomingEvents.value ?? []) {
+    for (const d of ev.days) {
+      if (d.date === iso) out.push({ event: ev, startTime: d.startTime, endTime: d.endTime })
+    }
+  }
+  return out
 }
-const weekHasEvents = computed(() => weekDays.value.some(d => eventsOnDay(d.iso).length > 0))
-const maxEventsPerDay = computed(() => Math.max(0, ...weekDays.value.map(d => eventsOnDay(d.iso).length)))
+// Avec heure → bloc dans la grille ; sans heure → bande « journée »
+function timedOnDay(iso: string): Occurrence[] {
+  return occurrencesOnDay(iso).filter(o => o.startTime).sort((a, b) => toMinutes(a.startTime!) - toMinutes(b.startTime!))
+}
+function alldayOnDay(iso: string): Occurrence[] {
+  return occurrencesOnDay(iso).filter(o => !o.startTime)
+}
+
+const weekHasAllday = computed(() => weekDays.value.some(d => alldayOnDay(d.iso).length > 0))
+const maxAlldayPerDay = computed(() => Math.max(0, ...weekDays.value.map(d => alldayOnDay(d.iso).length)))
 // Hauteur réservée pour la bande « journée » (alignée sur toutes les colonnes)
 const ALLDAY_ROW_PX = 24
-const alldayHeightPx = computed(() => (weekHasEvents.value ? maxEventsPerDay.value * ALLDAY_ROW_PX + 8 : 0))
+const alldayHeightPx = computed(() => (weekHasAllday.value ? maxAlldayPerDay.value * ALLDAY_ROW_PX + 8 : 0))
+
+// Minutes des événements timés de la semaine (pour étendre la plage horaire)
+const weekTimedMinutes = computed(() => {
+  const mins: number[] = []
+  for (const d of weekDays.value) {
+    for (const o of timedOnDay(d.iso)) {
+      mins.push(toMinutes(o.startTime!))
+      if (o.endTime) mins.push(toMinutes(o.endTime))
+    }
+  }
+  return mins
+})
 
 // ── Créneaux récurrents (template projeté sur chaque semaine) ──
 const PX_PER_MIN = 1.1
@@ -83,12 +111,14 @@ const slotsByDay = computed(() => {
 })
 
 const minMinutes = computed(() => {
-  if (!slots.value.length) return 9 * 60
-  return Math.floor(Math.min(...slots.value.map(s => toMinutes(s.startTime))) / 60) * 60
+  const all = [...slots.value.map(s => toMinutes(s.startTime)), ...weekTimedMinutes.value]
+  if (!all.length) return 9 * 60
+  return Math.floor(Math.min(...all) / 60) * 60
 })
 const maxMinutes = computed(() => {
-  if (!slots.value.length) return 22 * 60
-  return Math.ceil(Math.max(...slots.value.map(s => toMinutes(s.endTime))) / 60) * 60
+  const all = [...slots.value.map(s => toMinutes(s.endTime)), ...weekTimedMinutes.value]
+  if (!all.length) return 22 * 60
+  return Math.ceil(Math.max(...all) / 60) * 60
 })
 const trackHeight = computed(() => `${(maxMinutes.value - minMinutes.value) * PX_PER_MIN}px`)
 const hourLabels = computed(() => {
@@ -110,6 +140,15 @@ function slotTitle(slot: TimeSlot): string {
   return parts.join(' · ')
 }
 
+// Bloc d'un événement timé dans la grille (positionné par ses heures)
+function eventBlockStyle(o: Occurrence) {
+  const start = toMinutes(o.startTime!)
+  const end = o.endTime ? toMinutes(o.endTime) : start + 60
+  const top = (start - minMinutes.value) * PX_PER_MIN
+  const height = Math.max((end - start) * PX_PER_MIN, 22)
+  return { top: `${top}px`, height: `${height}px` }
+}
+
 // ── Liste « Événements à venir » ───────────────────────────
 function fmtEventDate(date: string) {
   const [y, m, d] = date.split('-').map(Number)
@@ -125,6 +164,17 @@ function fmtEventRange(ev: ClubEvent) {
   }
   const start = new Date(sy!, sm! - 1, sd!)
   return `Du ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+}
+// Résumé horaires pour la liste : un horaire, « horaires variables », ou rien
+function eventTimes(ev: ClubEvent): string {
+  const timed = ev.days.filter(d => d.startTime)
+  if (!timed.length) return ''
+  const distinct = new Set(timed.map(d => `${d.startTime}–${d.endTime ?? ''}`))
+  if (distinct.size === 1) {
+    const d = timed[0]!
+    return d.endTime ? `${d.startTime} – ${d.endTime}` : `${d.startTime}`
+  }
+  return 'horaires variables selon le jour'
 }
 
 const LEGEND: { category: SlotCategory, label: string }[] = [
@@ -166,7 +216,7 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
         <!-- Colonne axe horaire -->
         <div class="cal-axis" aria-hidden="true">
           <div class="cal-axis-head" />
-          <div v-if="weekHasEvents" class="cal-axis-allday" :style="{ height: `${alldayHeightPx}px` }" />
+          <div v-if="weekHasAllday" class="cal-axis-allday" :style="{ height: `${alldayHeightPx}px` }" />
           <div class="cal-axis-hours" :style="{ height: trackHeight }">
             <span
               v-for="label in hourLabels"
@@ -184,17 +234,17 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
               <span class="cal-date">{{ day.dayNum }}</span>
             </h3>
 
-            <div v-if="weekHasEvents" class="cal-allday" :style="{ height: `${alldayHeightPx}px` }">
+            <div v-if="weekHasAllday" class="cal-allday" :style="{ height: `${alldayHeightPx}px` }">
               <span
-                v-for="ev in eventsOnDay(day.iso)"
-                :key="ev.id"
+                v-for="o in alldayOnDay(day.iso)"
+                :key="o.event.id"
                 class="allday-chip"
-                :title="`${ev.title}${ev.location ? ' · ' + ev.location : ''}`"
-              >{{ ev.title }}</span>
+                :title="`${o.event.title}${o.event.location ? ' · ' + o.event.location : ''}`"
+              >{{ o.event.title }}</span>
             </div>
 
             <div class="cal-day-track" :style="{ height: trackHeight }">
-              <p v-if="!slotsByDay[day.key].length" class="cal-empty">Fermé</p>
+              <p v-if="!slotsByDay[day.key].length && !timedOnDay(day.iso).length" class="cal-empty">Fermé</p>
               <article
                 v-for="slot in slotsByDay[day.key]"
                 :key="slot.id"
@@ -210,6 +260,17 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
                   <template v-if="slot.instructor && slot.capacity > 0"> · </template>
                   <template v-if="slot.capacity > 0">{{ slot.capacity }} places</template>
                 </p>
+              </article>
+
+              <article
+                v-for="o in timedOnDay(day.iso)"
+                :key="`ev-${o.event.id}`"
+                class="event-block"
+                :style="eventBlockStyle(o)"
+                :title="`${o.event.title} · ${o.startTime}${o.endTime ? ' – ' + o.endTime : ''}${o.event.location ? ' · ' + o.event.location : ''}`"
+              >
+                <p class="event-block-time">{{ o.startTime }}<template v-if="o.endTime"> – {{ o.endTime }}</template></p>
+                <h4 class="event-block-title">{{ o.event.title }}</h4>
               </article>
             </div>
           </section>
@@ -240,9 +301,7 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
             </p>
             <p class="event-when">
               {{ fmtEventRange(ev) }}
-              <template v-if="ev.startTime">
-                · {{ ev.startTime }}<template v-if="ev.endTime"> – {{ ev.endTime }}</template>
-              </template>
+              <template v-if="eventTimes(ev)"> · {{ eventTimes(ev) }}</template>
             </p>
             <p v-if="ev.location" class="event-where">📍 {{ ev.location }}</p>
             <p v-if="ev.description" class="event-desc">{{ ev.description }}</p>
@@ -484,6 +543,46 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
   background: transparent;
 }
 
+/* Bloc événement timé (distinct des créneaux) */
+.event-block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: 8px;
+  border-left: 4px solid var(--ambre);
+  background: color-mix(in srgb, var(--ambre) 18%, white);
+  padding: 0.35rem 0.5rem;
+  overflow: hidden;
+  z-index: 3;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.event-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(22, 36, 29, 0.15);
+  z-index: 4;
+}
+
+.event-block-time {
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--ambre) 70%, black);
+  margin: 0;
+}
+
+.event-block-title {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  margin: 0.1rem 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .slot-time {
   font-size: 0.72rem;
   font-weight: 500;
@@ -671,13 +770,15 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
     justify-content: flex-start;
   }
 
-  .slot {
+  .slot,
+  .event-block {
     position: static !important;
     height: auto !important;
     margin-bottom: 0.55rem;
   }
 
-  .slot-group {
+  .slot-group,
+  .event-block-title {
     -webkit-line-clamp: unset;
     display: block;
   }
