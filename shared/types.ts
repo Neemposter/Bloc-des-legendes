@@ -25,7 +25,8 @@ export interface ClubEvent {
   id: number
   title: string
   description: string | null
-  date: string // YYYY-MM-DD
+  date: string // YYYY-MM-DD (date de début)
+  endDate: string | null // YYYY-MM-DD, événement sur plusieurs jours
   startTime: string | null // HH:MM
   endTime: string | null // HH:MM
   location: string | null

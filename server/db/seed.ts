@@ -68,6 +68,15 @@ export function seedIfEmpty(db: Db) {
         createdAt: now,
         updatedAt: now,
       },
+      {
+        title: 'Stage d\'escalade de la Toussaint',
+        description: 'Trois jours de stage intensif pendant les vacances : technique, bloc et sortie falaise. Ouvert aux ados et adultes.',
+        date: '2026-10-26',
+        endDate: '2026-10-28',
+        location: 'Salle des sports Bodénès + falaises du littoral',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]).run()
   }
 

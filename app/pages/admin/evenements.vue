@@ -16,6 +16,7 @@ const form = reactive({
   title: '',
   description: '',
   date: '',
+  endDate: '',
   startTime: '',
   endTime: '',
   location: '',
@@ -23,7 +24,7 @@ const form = reactive({
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { title: '', description: '', date: '', startTime: '', endTime: '', location: '' })
+  Object.assign(form, { title: '', description: '', date: '', endDate: '', startTime: '', endTime: '', location: '' })
   formError.value = ''
   showForm.value = true
 }
@@ -34,6 +35,7 @@ function openEdit(ev: ClubEvent) {
     title: ev.title,
     description: ev.description ?? '',
     date: ev.date,
+    endDate: ev.endDate ?? '',
     startTime: ev.startTime ?? '',
     endTime: ev.endTime ?? '',
     location: ev.location ?? '',
@@ -56,6 +58,10 @@ async function saveEvent() {
     formError.value = 'La date est obligatoire.'
     return
   }
+  if (form.endDate && form.endDate < form.date) {
+    formError.value = 'La date de fin doit être après la date de début.'
+    return
+  }
   saving.value = true
   formError.value = ''
   try {
@@ -63,6 +69,7 @@ async function saveEvent() {
       title: form.title,
       description: form.description || null,
       date: form.date,
+      endDate: form.endDate || null,
       startTime: form.startTime || null,
       endTime: form.endTime || null,
       location: form.location || null,
@@ -122,6 +129,19 @@ function chipMonth(iso: string) {
   const [y, m, d] = iso.split('-').map(Number)
   return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { month: 'short' })
 }
+
+// Plage de dates lisible pour un événement multi-jours
+function fmtRange(ev: ClubEvent) {
+  if (!ev.endDate || ev.endDate === ev.date) return fmtDate(ev.date)
+  const [sy, sm, sd] = ev.date.split('-').map(Number)
+  const [ey, em, ed] = ev.endDate.split('-').map(Number)
+  const end = new Date(ey!, em! - 1, ed!)
+  if (sy === ey && sm === em) {
+    return `Du ${sd} au ${ed} ${end.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`
+  }
+  const start = new Date(sy!, sm! - 1, sd!)
+  return `Du ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+}
 </script>
 
 <template>
@@ -142,12 +162,16 @@ function chipMonth(iso: string) {
           <span class="event-month">{{ chipMonth(ev.date) }}</span>
         </div>
         <div class="event-body">
-          <p class="event-title">{{ ev.title }}</p>
+          <p class="event-title">
+            {{ ev.title }}
+            <span v-if="ev.endDate && ev.endDate !== ev.date" class="event-multiday">Plusieurs jours</span>
+          </p>
+          <p v-if="ev.endDate && ev.endDate !== ev.date" class="event-range">{{ fmtRange(ev) }}</p>
           <p class="event-meta">
             <template v-if="ev.startTime">{{ ev.startTime }}<template v-if="ev.endTime"> – {{ ev.endTime }}</template></template>
             <template v-if="ev.location"><template v-if="ev.startTime"> · </template>{{ ev.location }}</template>
           </p>
-          <p v-if="isPast(ev.date)" class="event-past-badge">Passé</p>
+          <p v-if="isPast(ev.endDate ?? ev.date)" class="event-past-badge">Passé</p>
         </div>
         <div class="event-actions">
           <button class="btn-ghost" @click="openEdit(ev)">Modifier</button>
@@ -172,10 +196,17 @@ function chipMonth(iso: string) {
               <input v-model="form.title" class="field-input" type="text" required placeholder="Ex : Sortie falaise côte nord" />
             </div>
 
-            <div class="field">
-              <label class="field-label">Date *</label>
-              <input v-model="form.date" class="field-input" type="date" required />
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label">Date de début *</label>
+                <input v-model="form.date" class="field-input" type="date" required />
+              </div>
+              <div class="field">
+                <label class="field-label">Date de fin</label>
+                <input v-model="form.endDate" class="field-input" type="date" :min="form.date || undefined" />
+              </div>
             </div>
+            <p class="field-hint">Laissez la date de fin vide pour un événement sur une seule journée.</p>
 
             <div class="field-row">
               <div class="field">
@@ -290,6 +321,28 @@ function chipMonth(iso: string) {
 .event-title {
   font-weight: 500;
   margin: 0 0 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.event-multiday {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ambre);
+  background: color-mix(in srgb, var(--ambre) 14%, white);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
+.event-range {
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 0 0 0.1rem;
 }
 
 .event-meta {
@@ -434,6 +487,12 @@ function chipMonth(iso: string) {
 
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 .field-label { font-weight: 500; font-size: 0.95rem; }
+
+.field-hint {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: -0.4rem 0 0;
+}
 
 .field-input {
   font-family: var(--font-body);
