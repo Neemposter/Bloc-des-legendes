@@ -1,3 +1,11 @@
+const WEEKDAY_BY_GETDAY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
+
+// Jour de la semaine (clé EN) d'une date YYYY-MM-DD.
+export function weekdayOf(iso: string): typeof WEEKDAY_BY_GETDAY[number] {
+  const [y, m, d] = iso.split('-').map(Number)
+  return WEEKDAY_BY_GETDAY[new Date(y!, m! - 1, d!).getDay()]!
+}
+
 // Liste des dates (YYYY-MM-DD) entre start et end inclus.
 export function datesBetween(start: string, end: string | null): string[] {
   const last = end ?? start

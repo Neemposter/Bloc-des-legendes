@@ -18,6 +18,8 @@ export interface TimeSlot {
   groupName: string
   instructor: string | null
   capacity: number
+  recurring: boolean // chaque semaine, sinon ponctuel à une date
+  date: string | null // YYYY-MM-DD si non récurrent
 }
 
 // Un jour d'un événement, avec ses horaires propres

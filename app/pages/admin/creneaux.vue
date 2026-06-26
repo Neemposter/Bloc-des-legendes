@@ -40,11 +40,13 @@ const form = reactive({
   groupName: '',
   instructor: '',
   capacity: 0,
+  recurring: true,
+  date: '',
 })
 
 function openCreate(day: Weekday = 'monday') {
   editing.value = null
-  Object.assign(form, { day, startTime: '', endTime: '', groupName: '', instructor: '', capacity: 0 })
+  Object.assign(form, { day, startTime: '', endTime: '', groupName: '', instructor: '', capacity: 0, recurring: true, date: '' })
   formError.value = ''
   showForm.value = true
 }
@@ -58,6 +60,8 @@ function openEdit(slot: TimeSlot) {
     groupName: slot.groupName,
     instructor: slot.instructor ?? '',
     capacity: slot.capacity,
+    recurring: slot.recurring,
+    date: slot.date ?? '',
   })
   formError.value = ''
   showForm.value = true
@@ -81,6 +85,10 @@ async function saveSlot() {
     formError.value = 'Le nom du groupe est obligatoire.'
     return
   }
+  if (!form.recurring && !form.date) {
+    formError.value = 'Une date est requise pour un créneau ponctuel.'
+    return
+  }
   saving.value = true
   formError.value = ''
   try {
@@ -91,6 +99,8 @@ async function saveSlot() {
       groupName: form.groupName,
       instructor: form.instructor || null,
       capacity: Number(form.capacity) || 0,
+      recurring: form.recurring,
+      date: form.recurring ? null : form.date,
     }
     if (editing.value) {
       await $fetch(`/api/admin/time-slots/${editing.value.id}`, { method: 'PUT', body })
@@ -125,6 +135,11 @@ async function confirmDelete() {
     deleting.value = false
   }
 }
+
+function fmtSlotDate(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 </script>
 
 <template>
@@ -154,7 +169,10 @@ async function confirmDelete() {
           >
             <div class="slot-time">{{ slot.startTime }}<br>{{ slot.endTime }}</div>
             <div class="slot-body">
-              <p class="slot-group">{{ slot.groupName }}</p>
+              <p class="slot-group">
+                {{ slot.groupName }}
+                <span v-if="!slot.recurring && slot.date" class="slot-oneoff">Ponctuel · {{ fmtSlotDate(slot.date) }}</span>
+              </p>
               <p class="slot-meta">
                 <template v-if="slot.instructor">{{ slot.instructor }}</template>
                 <template v-if="slot.instructor && slot.capacity > 0"> · </template>
@@ -182,11 +200,21 @@ async function confirmDelete() {
           </div>
 
           <form class="panel-form" @submit.prevent="saveSlot" novalidate>
-            <div class="field">
+            <label class="recurring-toggle">
+              <input v-model="form.recurring" type="checkbox" />
+              <span>Se répète chaque semaine</span>
+            </label>
+
+            <div v-if="form.recurring" class="field">
               <label class="field-label">Jour *</label>
               <select v-model="form.day" class="field-input">
                 <option v-for="d in DAYS" :key="d.key" :value="d.key">{{ d.label }}</option>
               </select>
+            </div>
+            <div v-else class="field">
+              <label class="field-label">Date *</label>
+              <input v-model="form.date" class="field-input" type="date" required />
+              <p class="field-hint">Le créneau n'apparaîtra que ce jour-là.</p>
             </div>
 
             <div class="field-row">
@@ -339,6 +367,19 @@ async function confirmDelete() {
   margin: 0 0 0.1rem;
 }
 
+.slot-oneoff {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ambre);
+  background: color-mix(in srgb, var(--ambre) 14%, white);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  margin-left: 0.4rem;
+  white-space: nowrap;
+}
+
 .slot-meta {
   color: var(--ink-soft);
   font-size: 0.85rem;
@@ -462,6 +503,27 @@ async function confirmDelete() {
 
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 .field-label { font-weight: 500; font-size: 0.95rem; }
+
+.field-hint {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 0.1rem 0 0;
+}
+
+.recurring-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.recurring-toggle input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--turquoise);
+  cursor: pointer;
+}
 
 .field-input {
   font-family: var(--font-body);

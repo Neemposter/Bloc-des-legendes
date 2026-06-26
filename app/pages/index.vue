@@ -47,12 +47,14 @@ const WEEKDAYS: { key: Weekday; label: string }[] = [
   { key: 'sunday', label: 'Dimanche' },
 ]
 
-const slotCount = computed(() => slotsData.value?.length ?? 0)
+// Le teaser « semaine type » de l'accueil ne montre que les créneaux récurrents
+const recurringSlots = computed(() => (slotsData.value ?? []).filter(s => s.recurring))
+const slotCount = computed(() => recurringSlots.value.length)
 
 const slotsByDay = computed(() => {
   const map = {} as Record<Weekday, TimeSlot[]>
   for (const day of WEEKDAYS) {
-    map[day.key] = (slotsData.value ?? [])
+    map[day.key] = recurringSlots.value
       .filter(s => s.day === day.key)
       .sort((a, b) => a.startTime.localeCompare(b.startTime))
   }
