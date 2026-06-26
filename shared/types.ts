@@ -20,16 +20,22 @@ export interface TimeSlot {
   capacity: number
 }
 
-// Miroir des lignes de la table events
+// Un jour d'un événement, avec ses horaires propres
+export interface EventDay {
+  date: string // YYYY-MM-DD
+  startTime: string | null // HH:MM (vide = journée entière)
+  endTime: string | null // HH:MM
+}
+
+// Miroir des lignes de la table events (enrichi de ses jours)
 export interface ClubEvent {
   id: number
   title: string
   description: string | null
-  date: string // YYYY-MM-DD (date de début)
-  endDate: string | null // YYYY-MM-DD, événement sur plusieurs jours
-  startTime: string | null // HH:MM
-  endTime: string | null // HH:MM
+  date: string // YYYY-MM-DD (date de début = min des jours)
+  endDate: string | null // YYYY-MM-DD, fin si multi-jours
   location: string | null
+  days: EventDay[]
   createdAt: string
   updatedAt: string
 }
