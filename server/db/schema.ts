@@ -34,6 +34,9 @@ export const timeSlots = sqliteTable('time_slots', {
   groupName: text('group_name').notNull(),
   instructor: text('instructor'),
   capacity: integer('capacity').notNull().default(0),
+  // récurrent (chaque semaine) ou ponctuel à une date précise
+  recurring: integer('recurring', { mode: 'boolean' }).notNull().default(true),
+  date: text('date'), // YYYY-MM-DD, requis si non récurrent
 })
 
 // Messages du formulaire de contact, consultés en admin
@@ -52,12 +55,23 @@ export const events = sqliteTable('events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull(),
   description: text('description'),
-  date: text('date').notNull(), // YYYY-MM-DD
-  startTime: text('start_time'), // HH:MM, optionnel
-  endTime: text('end_time'),   // HH:MM, optionnel
+  date: text('date').notNull(), // YYYY-MM-DD (date de début = min des jours)
+  endDate: text('end_date'), // YYYY-MM-DD, fin (= max des jours) si multi-jours
+  // legacy : conservées pour le backfill, plus écrites par le nouveau flux
+  startTime: text('start_time'), // HH:MM, legacy
+  endTime: text('end_time'),   // HH:MM, legacy
   location: text('location'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+})
+
+// Jours d'un événement, avec horaires propres à chaque jour
+export const eventDays = sqliteTable('event_days', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  eventId: integer('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  date: text('date').notNull(), // YYYY-MM-DD
+  startTime: text('start_time'), // HH:MM, optionnel (vide = journée entière)
+  endTime: text('end_time'), // HH:MM, optionnel
 })
 
 // Config éditable en admin, ex : key = registration_link
