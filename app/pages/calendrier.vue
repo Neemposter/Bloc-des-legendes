@@ -100,15 +100,12 @@ function toMinutes(time: string): number {
   return h * 60 + m
 }
 
-const slotsByDay = computed(() => {
-  const map = {} as Record<Weekday, TimeSlot[]>
-  for (const key of WEEKDAY_KEYS) {
-    map[key] = slots.value
-      .filter(s => s.day === key)
-      .sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime))
-  }
-  return map
-})
+// Créneaux d'un jour : récurrents (par jour de semaine) + ponctuels (à cette date)
+function slotsForDay(day: { iso: string, key: Weekday }): TimeSlot[] {
+  return slots.value
+    .filter(s => (s.recurring ? s.day === day.key : s.date === day.iso))
+    .sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime))
+}
 
 const minMinutes = computed(() => {
   const all = [...slots.value.map(s => toMinutes(s.startTime)), ...weekTimedMinutes.value]
@@ -181,7 +178,7 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
   { category: 'ecole', label: 'École d\'escalade' },
   { category: 'ados', label: 'Ados' },
   { category: 'adultes', label: 'Adultes' },
-  { category: 'compet', label: 'Compétition' },
+  { category: 'compet', label: 'Événements' },
   { category: 'libre', label: 'Accès libre' },
 ]
 </script>
@@ -244,9 +241,9 @@ const LEGEND: { category: SlotCategory, label: string }[] = [
             </div>
 
             <div class="cal-day-track" :style="{ height: trackHeight }">
-              <p v-if="!slotsByDay[day.key].length && !timedOnDay(day.iso).length" class="cal-empty">Fermé</p>
+              <p v-if="!slotsForDay(day).length && !timedOnDay(day.iso).length" class="cal-empty">Fermé</p>
               <article
-                v-for="slot in slotsByDay[day.key]"
+                v-for="slot in slotsForDay(day)"
                 :key="slot.id"
                 class="slot"
                 :class="`slot--${slotCategory(slot.groupName)}`"

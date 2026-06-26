@@ -34,6 +34,9 @@ export const timeSlots = sqliteTable('time_slots', {
   groupName: text('group_name').notNull(),
   instructor: text('instructor'),
   capacity: integer('capacity').notNull().default(0),
+  // récurrent (chaque semaine) ou ponctuel à une date précise
+  recurring: integer('recurring', { mode: 'boolean' }).notNull().default(true),
+  date: text('date'), // YYYY-MM-DD, requis si non récurrent
 })
 
 // Messages du formulaire de contact, consultés en admin
